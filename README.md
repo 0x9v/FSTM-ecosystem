@@ -7,18 +7,18 @@ this repository is divided into two independant components:
 ```text
 FSTM-ecosystem/
 │
-├── fstm_bot/                 # [Notification Bot] Node.js & Python
-│   ├── src/                  # Core routing and event handlers
-│   ├── watchdog.py           # Web scraper for real-time exam results
-│   ├── server.js             # WhatsApp Web client implementation
-│   ├── cli.py                # CLI tool for managing NoSQL database records
+├── fstm_bot/                 # [notification bot] node.js & python
+│   ├── src/                  # core routing and event handlers
+│   ├── watchdog.py           # web scraper for realtime exam results
+│   ├── server.js             # whatsapp web client implementation
+│   ├── cli.py                # CLI tool for managing nosql database records
 │   ├── boot.sh               # PM2 startup script
 │   └── ram.sh                # RAM usage monitor
 │
-└── fstm_analytics/           # [Data Analytics] Python & MariaDB
-    ├── 1_student_scraper.py  # Portal scraper and MariaDB database updater
-    ├── 2_data_exporter.py    # Extracts and formats filtered student datasets
-    └── 3_stat_analyzer.py    # Generates statistical charts and PDF reports
+└── fstm_analytics/           # [data analytics] python & mariadb
+    ├── 1_student_scraper.py  # portal scraper and mariadb database updater
+    ├── 2_data_exporter.py    # extracts and formats filtered student datasets
+    └── 3_stat_analyzer.py    # generates statistical charts and PDF reports
 ```
 ## engine 1: FSTM notification bot (`fstm_bot/`)
 a whatsapp bot built with `whatsapp-web.js` and managed via pm2, serving as an automated dispatcher and command interface.
