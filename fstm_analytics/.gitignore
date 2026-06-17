@@ -1,0 +1,12 @@
+# Local Data Exports & Logs
+*.pdf
+*.png
+*.txt
+*.csv
+failed_extraction.txt
+
+# Python Caches
+__pycache__/
+*.pyc
+venv/
+.env

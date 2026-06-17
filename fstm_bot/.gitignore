@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+venv/
+
+# Environment Secrets
+.env
+
+# WhatsApp Auth Cache
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Dynamic State Databases
+custom_commands.json
+known_announcements.json
+recent_history.json
+
+# OS Generated Files
+.DS_Store
