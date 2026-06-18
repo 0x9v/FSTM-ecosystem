@@ -37,7 +37,7 @@ def main():
         
         # note: i fixed a logic bug here from your original script where providing both caused an error
         if args.tag and args.folder:
-            new_payload = f"[{args.tag.lower()}]{args.folder.lower()}/{args.payload.lower()}"
+            new_payload = f"[{args.tag.upper()}]{args.folder.upper()}/{args.payload}"
         elif args.tag or args.folder:
             print("[-] error: if using media, you must provide both --tag and --folder.")
             return
