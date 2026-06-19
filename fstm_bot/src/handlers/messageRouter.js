@@ -79,11 +79,11 @@ async function handleMessage(client, msg) {
                 if (fs.existsSync(filePath)) {
                     const media = MessageMedia.fromFilePath(filePath);
                     
-                    if (tag === 'STICKER') {
+                    if (tag === 'STICKER' || tag === 'IMG') {
                         await client.sendMessage(msg.from, media, { sendMediaAsSticker: true, quotedMessageId: msg.id._serialized });
                     } else if (tag === 'VOICE') {
                         await client.sendMessage(msg.from, media, { sendAudioAsVoice: true, quotedMessageId: msg.id._serialized });
-                    } else if (tag === 'IMG' || tag === 'AUDIO' || tag === 'FILE' || tag === 'VIDEO') {
+                    } else if (tag === 'AUDIO' || tag === 'FILE' || tag === 'VIDEO') {
                         await client.sendMessage(msg.from, media, { quotedMessageId: msg.id._serialized });
                     }
                     return; 

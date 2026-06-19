@@ -4,6 +4,7 @@ venv/
 
 # Environment Secrets
 .env
+*.pdf
 
 # WhatsApp Auth Cache
 .wwebjs_auth/
