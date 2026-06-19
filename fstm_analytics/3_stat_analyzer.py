@@ -111,7 +111,7 @@ def safe_bar(val, total):
     if total == 0: return ""
     return "█" * int((val / total) * 35)
 
-def generate_pdf_report(module, metric, stats, grades, parcours_data, filename="beautiful_stats.pdf"):
+def generate_pdf_report(module, metric, session_label, stats, grades, parcours_data, filename="beautiful_stats.pdf"):
     plt.rcParams['font.family'] = 'sans-serif'
     plt.rcParams['text.color'] = '#2c3e50'
     colors = ['#e74c3c', '#f39c12', '#2ecc71', '#3498db']
@@ -209,7 +209,7 @@ def generate_pdf_report(module, metric, stats, grades, parcours_data, filename="
 
         <div class="header">
             <h1>{module}</h1>
-            <p>{metric}</p>
+            <p>{metric} | session: {session_label}</p>
         </div>
 
         <div class="section-title">macro distribution & leaderboard</div>
@@ -277,21 +277,29 @@ def main():
             return
         selected_module, _ = ask_menu("select module to analyze", modules)
 
+        session_options = ["normale", "rattrapage", "combined"]
+        selected_session, s_idx = ask_menu("select session", session_options, default_idx=0)
+
         metrics = ["exam", "moyenne", "tp"]
         selected_metric, m_idx = ask_menu("select target metric", metrics, default_idx=0)
         actual_metric = metrics[m_idx]
 
-        formats = ["cli (view in terminal)", "square image (1080x1080 png)", "pdf (formal html/weasyprint report)"]
-        selected_format_str, f_idx = ask_menu("output format", formats, default_idx=2)
-
         clear_screen()
-        print(f"{ui_text}[*] crunching {actual_metric} data for {selected_module.lower()}...{reset}\n")
+        print(f"{ui_text}[*] crunching {actual_metric} data for {selected_module.lower()} ({selected_session})...{reset}\n")
 
-        cursor.execute(f"select {actual_metric}, parcours from notes where module_name = %s and {actual_metric} is not null", (selected_module,))
+        query_base = f"select {actual_metric}, parcours from notes where module_name = %s and {actual_metric} is not null"
+        params = [selected_module]
+
+        if s_idx == 0:
+            query_base += " and is_rattrapage = 0"
+        elif s_idx == 1:
+            query_base += " and is_rattrapage = 1"
+
+        cursor.execute(query_base, tuple(params))
         results = cursor.fetchall()
 
         if not results:
-            print(f"{red}[-] no valid {actual_metric} data found for this module.{reset}")
+            print(f"{red}[-] no valid {actual_metric} data found for this session/module.{reset}")
             return
 
         grades = [float(row[0]) for row in results]
@@ -309,42 +317,21 @@ def main():
             parcours_leaderboard.append((p, np.mean(p_grades), len(p_grades)))
         parcours_leaderboard.sort(key=lambda x: x[1], reverse=True)
 
-        if f_idx == 0: 
-            print(f"{ui_primary}[+] === forensics: {actual_metric} ==={reset}")
-            cli_data = [
-                ["population", stats['count']],
-                ["moyenne (μ)", f"{stats['mean']:.2f}"],
-                ["std dev (σ)", f"{stats['std']:.2f}"],
-                ["top 5% limit", f"{stats['p95']:.2f}"],
-                ["false hope (8-9.9)", f"{stats['false_hope']} ({(stats['false_hope']/stats['count'])*100:.1f}%)"],
-                ["slaughter (<5)", f"{stats['slaughter']} ({(stats['slaughter']/stats['count'])*100:.1f}%)"]
-            ]
-            print(tabulate(cli_data, tablefmt="fancy_grid").lower())
-            
-            print(f"\n{ui_primary}[*] === parcours war ==={reset}")
-            p_table = [[p[0], f"{p[1]:.2f}", p[2]] for p in parcours_leaderboard]
-            print(tabulate(p_table, headers=["major", "average", "students"], tablefmt="fancy_grid").lower())
-
-        elif f_idx == 1: 
-            filename = input(f"{cyan}[*] enter output filename (without .png): {reset}").strip() + ".png"
-            # generate_square_image(selected_module, actual_metric, stats, grades, filename) # NOTE: generate_square_image was missing from original script
-            print(f"{green}[+] square image rendered to {filename}{reset}")
-
-        elif f_idx == 2: 
-            clean_module_name = "".join([c if c.isalnum() else "_" for c in selected_module])[:30].lower()
-            default_pdf_name = f"{clean_module_name}_{actual_metric}.pdf"
-            
-            user_filename = input(f"{cyan}[*] enter filename (press enter for '{default_pdf_name}'): {reset}").strip()
-            final_filename = user_filename + ".pdf" if user_filename else default_pdf_name
-            
-            generate_pdf_report(
-                module=selected_module.lower(), 
-                metric=actual_metric, 
-                stats=stats, 
-                grades=grades, 
-                parcours_data=parcours_leaderboard, 
-                filename=final_filename
-            )
+        clean_module_name = "".join([c if c.isalnum() else "_" for c in selected_module])[:30].lower()
+        default_pdf_name = f"{clean_module_name}_{actual_metric}_{selected_session}.pdf"
+        
+        user_filename = input(f"{cyan}[*] enter filename (press enter for '{default_pdf_name}'): {reset}").strip()
+        final_filename = user_filename + ".pdf" if user_filename else default_pdf_name
+        
+        generate_pdf_report(
+            module=selected_module.lower(), 
+            metric=actual_metric,
+            session_label=selected_session,
+            stats=stats, 
+            grades=grades, 
+            parcours_data=parcours_leaderboard, 
+            filename=final_filename
+        )
 
     finally:
         cursor.close()
