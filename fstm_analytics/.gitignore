@@ -3,6 +3,7 @@
 *.png
 *.csv
 failed_extraction.txt
+*.list
 
 # Python Caches
 __pycache__/
