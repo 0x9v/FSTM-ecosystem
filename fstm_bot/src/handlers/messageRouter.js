@@ -5,6 +5,7 @@ const { exec } = require('child_process');
 const { fetchGeminiResponse } = require('../gemini');
 const config = require('../config');
 const feedback_msg = "\n\n[*] enjoying the bot? drop a dm with your feedback or feature requests.";
+const { PDFDocument } = require('pdf-lib');
 
 const globalCooldowns = new Map();
 const mutedGroups = new Set();
@@ -201,7 +202,7 @@ async function handleMessage(client, msg) {
         }
     }
 
-    if (!config.COOLDOWN_TIMES[command] && !customDb[command]) return;
+    if (!config.COOLDOWN_TIMES[command] && !customDb[command] && command !== '!makepdf' && command !== '!pdf') return;
 
     const lockKey = `${chatId}_${command}`; 
     if (!isAdmin && globalCooldowns.has(lockKey)) {
@@ -274,6 +275,95 @@ async function handleMessage(client, msg) {
         }
         return;
     }
+
+    if (command === '!makepdf' || command === '!pdf') {
+        const args = argsText.trim().split(/\s+/);
+        let targetCount = parseInt(args[0]);
+        let fileName = 'fstm_document';
+        let isSniperMode = false;
+
+        // 1. Determine Mode: Auto vs Sniper
+        if (!isNaN(targetCount) && targetCount > 0) {
+            isSniperMode = true;
+            args.shift(); // Remove the number from the filename
+            fileName = args.length > 0 ? args.join('_') : fileName;
+        } else {
+            fileName = argsText ? argsText.trim().replace(/\s+/g, '_') : fileName;
+        }
+
+        if (!fileName.endsWith('.pdf')) fileName += '.pdf';
+        await msg.reply(`[*] accessing temporal cache to forge ${fileName}...`);
+
+        try {
+            const chat = await msg.getChat();
+            // Fetch a bigger batch of history to ensure Sniper mode has enough reach
+            const messages = await chat.fetchMessages({ limit: 40 }); 
+            
+            // 2. Dual-Timeline Setup
+            // Sniper Mode: 15-minute fallback safety net. Auto Mode: Strict 1-minute (60 seconds) lock.
+            const cutoffSeconds = isSniperMode ? (15 * 60) : 60; 
+            const cutoffTime = (Date.now() / 1000) - cutoffSeconds; 
+            
+            const targetMessages = [];
+
+            // 3. Reverse Temporal Scan (Newest to Oldest)
+            for (let i = messages.length - 1; i >= 0; i--) {
+                const m = messages[i];
+                const mSender = m.author || m.from;
+                
+                if (mSender === senderId && m.timestamp > cutoffTime && m.hasMedia) {
+                    targetMessages.push(m);
+                    
+                    // In Sniper Mode, abort the scan the exact moment we secure the requested payload count
+                    if (isSniperMode && targetMessages.length === targetCount) {
+                        break;
+                    }
+                }
+            }
+
+            if (targetMessages.length === 0) {
+                const modeStr = isSniperMode ? "requested amount of images" : "images in the last 60 seconds";
+                return msg.reply(`[-] no ${modeStr} found. send the photos first, then use the command.`);
+            }
+
+            // Put them back in chronological order (Page 1 -> Page X)
+            targetMessages.reverse(); 
+            const pdfDoc = await PDFDocument.create();
+            
+            // 4. In-Memory Forge
+            for (const m of targetMessages) {
+                const media = await m.downloadMedia();
+                if (!media || !media.mimetype.startsWith('image/')) continue;
+
+                const imgBytes = Buffer.from(media.data, 'base64');
+                let image;
+                
+                if (media.mimetype === 'image/jpeg') {
+                    image = await pdfDoc.embedJpg(imgBytes);
+                } else if (media.mimetype === 'image/png') {
+                    image = await pdfDoc.embedPng(imgBytes);
+                } else {
+                    continue; 
+                }
+
+                const page = pdfDoc.addPage([image.width, image.height]);
+                page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+            }
+
+            const pdfBytes = await pdfDoc.save();
+            const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
+
+            // 5. Delivery
+            const finalMedia = new MessageMedia('application/pdf', pdfBase64, fileName);
+            await client.sendMessage(msg.from, finalMedia, { quotedMessageId: msg.id._serialized });
+
+        } catch (err) {
+            console.error('[-] pdf forge error:', err);
+            await msg.reply('[-] system failure during pdf compilation.');
+        }
+        return;
+    }
+
 
     if (command === '!last') {
         try {
