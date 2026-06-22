@@ -248,7 +248,9 @@ async function handleMessage(client, msg) {
     command !== "!makepdf" &&
     command !== "!pdf" &&
     command !== "!mergepdf" &&
-    command !== "!merge"
+    command !== "!merge" &&
+    command !== "!source-code" &&
+    command !== "!repo"
   )
     return;
 
@@ -433,6 +435,15 @@ async function handleMessage(client, msg) {
       await msg.reply("[-] system failure during pdf compilation.");
     }
     return;
+  }
+
+  if (command === "!source-code" || command === "!repo") {
+    // NOTE: Replace this with your actual GitHub link!
+    const repoUrl = "https://github.com/0x9v/FSTM-ecosystem";
+
+    const replyText = `[*] *fstm-tools core architecture*\n\nthe entire infrastructure is open-source. inspect the grid here:\n${repoUrl}\n\n⭐ drop a star on the repo if you respect the build, or dm me directly for feedback/feature requests.`;
+
+    return msg.reply(replyText);
   }
 
   if (command === "!mergepdf" || command === "!merge") {
